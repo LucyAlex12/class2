@@ -1,18 +1,52 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { Provider } from 'react-redux';
+import { store } from '../store/store';
+import {StudentProvider} from '../context/StudentContext';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+export default function RootLayout() {
+    return (
+        <Provider store={store}>
+        
+                <StudentProvider>
+                    <Stack>
+                        <Stack.Screen
+                            name="index"
+                            options={{
+                                title: 'Welcome',
+                            }}
+                        />
 
-SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
-  );
+                        <Stack.Screen
+                            name="loginpage"
+                            options={{
+                                title: 'Login',
+                            }}
+                        />
+
+                        <Stack.Screen
+                            name="drawer"
+                            options = {{
+                                title: 'drawer'
+                                }}/>
+
+                        <Stack.Screen
+                            name="learninggoal"
+                            options = {{
+                                title: 'Learning Goal'
+                                }}/> 
+
+
+                        <Stack.Screen
+                            name="sqlite_lessons"
+                            options = {{
+                                title: 'SQLite Lessons'
+                                }}/>                
+                                
+
+
+                    </Stack>
+                </StudentProvider>  
+        </Provider>  
+    );
 }

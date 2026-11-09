@@ -54,3 +54,16 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Realm lessons
+
+The Realm Lessons screen stores lessons locally on the device. Realm uses native code, so this screen needs an Android or iOS development build; it does not run in Expo Go or the web app.
+
+For Android, start an emulator or connect a device and run:
+
+```bash
+npm install
+npx expo run:android
+```
+
+For iOS, run `npx expo run:ios` on macOS with Xcode installed. After the first native build, use `npx expo start` to start Metro and open the app in the development build. Open the drawer and choose **Realm Lessons** to add, complete, and delete locally stored lessons.
