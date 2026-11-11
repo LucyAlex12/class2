@@ -54,6 +54,14 @@ export default function DrawerLayout() {
           drawerLabel: "Realm Lessons",
         }}
       />
+
+      <Drawer.Screen
+        name="api_lessons"
+        options={{
+          title: "API Lessons",
+          drawerLabel: "API Lessons",
+        }}
+      />
     </Drawer>
   );
 }

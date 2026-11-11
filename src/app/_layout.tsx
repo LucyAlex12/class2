@@ -30,21 +30,6 @@ export default function RootLayout() {
                                 title: 'drawer'
                                 }}/>
 
-                        <Stack.Screen
-                            name="learninggoal"
-                            options = {{
-                                title: 'Learning Goal'
-                                }}/> 
-
-
-                        <Stack.Screen
-                            name="sqlite_lessons"
-                            options = {{
-                                title: 'SQLite Lessons'
-                                }}/>                
-                                
-
-
                     </Stack>
                 </StudentProvider>  
         </Provider>  
