@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 
 import {
   View,
@@ -12,8 +13,7 @@ import {
   Alert,
 } from 'react-native';
 
-import Realm from 'realm';
-import { Lesson } from '../../../database/RealmLesson';
+import type Realm from 'realm';
 
 type LessonData = {
   id: string;
@@ -23,6 +23,21 @@ type LessonData = {
 };
 
 export default function RealmLessonsScreen() {
+  if (Constants.expoGoConfig) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.heading}>Realm Lessons</Text>
+        <Text style={styles.description}>
+          Realm needs a development build. The other screens can run in Expo Go.
+        </Text>
+      </View>
+    );
+  }
+
+  return <RealmLessonsFeatureScreen />;
+}
+
+function RealmLessonsFeatureScreen() {
   const [realm, setRealm] = useState<Realm | null>(null);
 
   const [lessons, setLessons] = useState<LessonData[]>([]);
@@ -38,9 +53,18 @@ export default function RealmLessonsScreen() {
 
     async function openDatabase() {
       try {
-        const openedDatabase = await Realm.open({
-          schema: [Lesson],
-        });
+        const { default: RealmModule } = await import('realm');
+        const lessonSchema: Realm.ObjectSchema = {
+          name: 'Lesson',
+          primaryKey: 'id',
+          properties: {
+            id: 'string',
+            title: 'string',
+            description: 'string',
+            completed: { type: 'bool', default: false },
+          },
+        };
+        const openedDatabase = await RealmModule.open({ schema: [lessonSchema] });
 
         if (!active) {
           openedDatabase.close();
@@ -70,7 +94,7 @@ export default function RealmLessonsScreen() {
   }, []);
 
   function loadLessons(database: Realm) {
-    const savedLessons = database.objects<Lesson>('Lesson');
+    const savedLessons = database.objects<LessonData & Realm.Object>('Lesson');
 
     const lessonList: LessonData[] = Array.from(savedLessons).map(
       (item) => ({
@@ -95,7 +119,7 @@ export default function RealmLessonsScreen() {
     const newLessonId = `${Date.now()}-${Math.random()}`;
 
     realm.write(() => {
-      realm.create<Lesson>('Lesson', {
+      realm.create<LessonData & Realm.Object>('Lesson', {
         id: newLessonId,
         title: title.trim(),
         description: description.trim(),
@@ -112,7 +136,7 @@ export default function RealmLessonsScreen() {
   function toggleLesson(id: string) {
     if (!realm) return;
 
-    const lesson = realm.objectForPrimaryKey<Lesson>('Lesson', id);
+    const lesson = realm.objectForPrimaryKey<LessonData & Realm.Object>('Lesson', id);
 
     if (!lesson) return;
 
@@ -126,7 +150,7 @@ export default function RealmLessonsScreen() {
   function deleteLesson(id: string) {
     if (!realm) return;
 
-    const lesson = realm.objectForPrimaryKey<Lesson>('Lesson', id);
+    const lesson = realm.objectForPrimaryKey<LessonData & Realm.Object>('Lesson', id);
 
     if (!lesson) return;
 
