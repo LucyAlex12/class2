@@ -1,182 +1,123 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
 
-import { CourseCard } from '../../../components/course-card';
-import {
-  CourseEmptyState,
-  CourseErrorState,
-  CourseListEnd,
-  CourseListPage,
-  CourseWarning,
-} from '../../../components/course-list-ui';
-import { Course, getCoursePage } from '../../../services/courseApi';
+import { useState } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-const PAGE_SIZE = 10;
+// Sample course data
+const allCourses = [
+  { id: '1', name: 'React Native', description: 'Learn mobile app development.' },
+  { id: '2', name: 'JavaScript', description: 'Learn programming fundamentals.' },
+  { id: '3', name: 'React.js', description: 'Learn frontend development.' },
+  { id: '4', name: 'UI/UX Design', description: 'Learn interface design.' },
+  { id: '5', name: 'Node.js', description: 'Learn backend development.' },
+  { id: '6', name: 'Python', description: 'Learn Python programming.' },
+  { id: '7', name: 'Flutter', description: 'Build cross-platform apps.' },
+  { id: '8', name: 'Database Design', description: 'Learn database management.' },
+  { id: '9', name: 'HTML & CSS', description: 'Learn web design basics.' },
+];
 
-function uniqueCourses(courses: Course[]): Course[] {
-  const seen = new Set<number>();
-  return courses.filter((course) => {
-    if (seen.has(course.id)) return false;
-    seen.add(course.id);
-    return true;
-  });
-}
-
-function appendUniqueCourses(current: Course[], incoming: Course[]): Course[] {
-  const existingIds = new Set(current.map((course) => course.id));
-  return [...current, ...incoming.filter((course) => !existingIds.has(course.id))];
-}
+const PAGE_SIZE = 3;
 
 export default function PaginatedCoursesScreen() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
-  const [paginationError, setPaginationError] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Refs lock requests and keep the paging cursor current without relying on async state updates.
-  const requestGeneration = useRef(0);
-  const refreshInFlight = useRef(false);
-  const loadMoreInFlight = useRef(false);
-  const nextOffset = useRef(0);
-  const hasMoreRef = useRef(true);
-  const paginationErrorRef = useRef(false);
-  const hasLoadedSuccessfully = useRef(false);
+  // Display only the number of courses currently requested
+  const displayedCourses = allCourses.slice(0, visibleCount);
 
-  const refreshCourses = useCallback(async () => {
-    const thisGeneration = ++requestGeneration.current;
-    refreshInFlight.current = true;
-    paginationErrorRef.current = false;
-    setPaginationError('');
-    setError('');
-    setLoadingMore(false);
-
-    if (hasLoadedSuccessfully.current) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const firstPage = await getCoursePage(0, PAGE_SIZE);
-      if (thisGeneration !== requestGeneration.current) return;
-
-      setCourses(uniqueCourses(firstPage.courses));
-      nextOffset.current = firstPage.courses.length;
-      hasMoreRef.current = firstPage.courses.length === PAGE_SIZE;
-      setHasMore(hasMoreRef.current);
-      hasLoadedSuccessfully.current = true;
-    } catch (requestError) {
-      if (thisGeneration === requestGeneration.current) {
-        setError(requestError instanceof Error ? requestError.message : 'Unable to load courses.');
-      }
-    } finally {
-      if (thisGeneration === requestGeneration.current) {
-        refreshInFlight.current = false;
-        setLoading(false);
-        setRefreshing(false);
-      }
-    }
-  }, []);
-
-  const loadMore = useCallback(async () => {
-    if (
-      refreshInFlight.current ||
-      loadMoreInFlight.current ||
-      !hasMoreRef.current ||
-      paginationErrorRef.current
-    ) {
-      return;
-    }
-
-    loadMoreInFlight.current = true;
-    setLoadingMore(true);
-    setPaginationError('');
-    const thisGeneration = requestGeneration.current;
-    const start = nextOffset.current;
-
-    try {
-      const nextPage = await getCoursePage(start, PAGE_SIZE);
-      if (thisGeneration !== requestGeneration.current) return;
-
-      setCourses((current) => appendUniqueCourses(current, nextPage.courses));
-      // The server range is inclusive, so the next start advances by rows received.
-      nextOffset.current = start + nextPage.courses.length;
-      hasMoreRef.current = nextPage.courses.length === PAGE_SIZE;
-      setHasMore(hasMoreRef.current);
-    } catch (requestError) {
-      if (thisGeneration === requestGeneration.current) {
-        paginationErrorRef.current = true;
-        setPaginationError(requestError instanceof Error ? requestError.message : 'Could not load more courses.');
-      }
-    } finally {
-      loadMoreInFlight.current = false;
-      if (thisGeneration === requestGeneration.current) setLoadingMore(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => void refreshCourses(), 0);
-    return () => clearTimeout(timer);
-  }, [refreshCourses]);
-
-  const retryMore = () => {
-    paginationErrorRef.current = false;
-    setPaginationError('');
-    void loadMore();
+  // Load the next three courses
+  const loadMore = () => {
+    setVisibleCount((currentCount) => currentCount + PAGE_SIZE);
   };
 
-  const footer = loadingMore ? (
-    <CourseListEnd>
-      <ActivityIndicator size="small" color="#32063D" />
-      {'  '}Loading more courses…
-    </CourseListEnd>
-  ) : paginationError ? (
-    <CourseListEnd>
-      <Text style={styles.footerError}>{paginationError}</Text>
-      <Pressable style={styles.retryButton} onPress={retryMore}>
-        <Text style={styles.retryButtonText}>Retry loading more</Text>
-      </Pressable>
-    </CourseListEnd>
-  ) : !hasMore && courses.length > 0 ? (
-    <CourseListEnd>You’ve reached the end of the course list.</CourseListEnd>
-  ) : null;
-
-  if (loading && courses.length === 0) {
-    return (
-      <CourseListPage title="Paginated Courses" subtitle={`Loading the first ${PAGE_SIZE} courses from Supabase.`}>
-        <ActivityIndicator style={{ marginTop: 28 }} size="large" color="#32063D" />
-      </CourseListPage>
-    );
-  }
-
-  if (error && courses.length === 0) {
-    return (
-      <CourseListPage title="Paginated Courses" subtitle="Ten courses per page, ordered by course ID.">
-        <CourseErrorState message={error} onRetry={() => void refreshCourses()} />
-      </CourseListPage>
-    );
-  }
+  const hasMore = visibleCount < allCourses.length;
 
   return (
-    <CourseListPage title="Paginated Courses" subtitle={`Showing ${courses.length} course${courses.length === 1 ? '' : 's'} · ${PAGE_SIZE} per page`}>
-      {error ? <CourseWarning>{`Refresh failed: ${error}. Existing courses are still shown; pull down to retry.`}</CourseWarning> : null}
+    <View style={styles.container}>
+      <Text style={styles.heading}>Available Courses</Text>
+
+      <Text style={styles.subtitle}>
+        Showing {displayedCourses.length} of {allCourses.length} courses
+      </Text>
+
       <FlatList
-        data={courses}
-        keyExtractor={(course) => String(course.id)}
-        renderItem={({ item, index }) => <CourseCard course={item} index={index} />}
-        onEndReached={() => void loadMore()}
-        onEndReachedThreshold={0.4}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshCourses()} tintColor="#32063D" />}
-        ListEmptyComponent={<CourseEmptyState />}
-        ListFooterComponent={footer}
-        contentContainerStyle={{ paddingBottom: 20, flexGrow: courses.length === 0 ? 1 : undefined }}
+        data={displayedCourses}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.courseName}>{item.name}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+          </View>
+        )}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          hasMore ? (
+              <Text style={styles.buttonText}>..loading more courses</Text>
+          ) : (
+            <Text style={styles.endMessage}>
+              You have reached the end of the list.
+            </Text>
+          )
+        }
       />
-    </CourseListPage>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  footerError: { color: '#B42318', textAlign: 'center', fontSize: 12, lineHeight: 18 },
-  retryButton: { marginTop: 9, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: '#32063D' },
-  retryButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F5FA',
+    padding: 20,
+  },
+
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#32063D',
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 10,
+  },
+
+  courseName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+
+  description: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 5,
+  },
+
+  button: {
+    backgroundColor: '#32063D',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+
+  endMessage: {
+    textAlign: 'center',
+    color: '#666',
+    padding: 20,
+  },
 });

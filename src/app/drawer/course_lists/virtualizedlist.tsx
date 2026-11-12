@@ -1,53 +1,86 @@
-import { ActivityIndicator, RefreshControl, Text, VirtualizedList } from 'react-native';
 
-import { CourseCard } from '../../../components/course-card';
-import {
-  CourseEmptyState,
-  CourseErrorState,
-  CourseListPage,
-  CourseWarning,
-} from '../../../components/course-list-ui';
-import { useCourseCatalog } from '../../../hooks/use-course-catalog';
-import { Course } from '../../../services/courseApi';
+import { StyleSheet, Text, View, VirtualizedList } from 'react-native';
+
+// Sample course data
+const courses = [
+  { id: '1', name: 'React Native', description: 'Learn mobile app development.' },
+  { id: '2', name: 'JavaScript', description: 'Learn programming fundamentals.' },
+  { id: '3', name: 'React.js', description: 'Learn frontend development.' },
+  { id: '4', name: 'UI/UX Design', description: 'Learn interface design.' },
+  { id: '5', name: 'Node.js', description: 'Learn backend development.' },
+  { id: '6', name: 'Python', description: 'Learn Python programming.' },
+  { id: '7', name: 'Flutter', description: 'Build cross-platform apps.' },
+  { id: '8', name: 'Database Design', description: 'Learn how databases work.' },
+];
 
 export default function VirtualizedListDemoScreen() {
-  const { courses, loading, refreshing, error, refresh } = useCourseCatalog();
-
-  if (loading && courses.length === 0) {
-    return (
-      <CourseListPage title="VirtualizedList Demo" subtitle="Loading real course records from Supabase.">
-        <ActivityIndicator style={{ marginTop: 28 }} size="large" color="#32063D" />
-      </CourseListPage>
-    );
-  }
-
-  if (error && courses.length === 0) {
-    return (
-      <CourseListPage title="VirtualizedList Demo" subtitle="The lower-level virtualized list API.">
-        <CourseErrorState message={error} onRetry={() => void refresh()} />
-      </CourseListPage>
-    );
-  }
-
   return (
-    <CourseListPage title="VirtualizedList Demo" subtitle={`${courses.length} courses rendered in a virtualized window`}>
-      {error ? <CourseWarning>{`Refresh failed: ${error}. Pull down to try again.`}</CourseWarning> : null}
-      {/* VirtualizedList owns the rendering window; FlatList is its simpler array-based wrapper. */}
-      <VirtualizedList<Course>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Available Courses</Text>
+
+      <Text style={styles.subtitle}>
+        Explore our programming courses
+      </Text>
+
+      <VirtualizedList
         data={courses}
-        getItem={(data: Course[], index: number) => data[index]}
-        getItemCount={(data: Course[]) => data.length}
-        keyExtractor={(course) => String(course.id)}
-        renderItem={({ item, index }) => <CourseCard course={item} index={index} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#32063D" />}
-        ListEmptyComponent={<CourseEmptyState />}
-        ListHeaderComponent={
-          <Text style={{ color: '#716A75', fontSize: 12, marginBottom: 12 }}>
-            VirtualizedList renders a moving window of rows. FlatList is a convenient wrapper built on this component.
-          </Text>
-        }
-        contentContainerStyle={{ paddingBottom: 20, flexGrow: courses.length === 0 ? 1 : undefined }}
+
+        getItem={(data, index) => data[index]}
+
+        getItemCount={(data) => data.length}
+
+        keyExtractor={(item) => item.id}
+
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.courseName}>{item.name}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+          </View>
+        )}
+
+        initialNumToRender={4}
+        windowSize={5}
       />
-    </CourseListPage>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F5FA',
+    padding: 20,
+  },
+
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#32063D',
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 10,
+  },
+
+  courseName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+
+  description: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 5,
+  },
+});
