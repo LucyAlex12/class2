@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +13,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 
 import { Course, getCourses, uploadCourseImage } from '../../services/courseApi';
 
@@ -47,7 +47,8 @@ export default function APILessonsScreen() {
   }
 
   useEffect(() => {
-    fetchCourses();
+    const timer = setTimeout(() => void fetchCourses(), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   async function refreshCourses() {

@@ -48,6 +48,14 @@ export default function DrawerLayout() {
       />
 
       <Drawer.Screen
+        name="course_lists"
+        options={{
+          title: "Course Lists",
+          drawerLabel: "Course Lists",
+        }}
+      />
+
+      <Drawer.Screen
         name="realm_lessons"
         options={{
           title: "Realm Lessons",

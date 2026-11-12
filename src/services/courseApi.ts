@@ -4,8 +4,14 @@ export type Course = {
   id: number;
   title: string;
   description: string | null;
+  category: string | null;
   imagePath: string | null;
   imageUrl: string | null;
+};
+
+export type CourseCatalog = {
+  courses: Course[];
+  categoryAvailable: boolean;
 };
 
 const COURSE_IMAGE_BUCKET = 'course-images';
@@ -14,6 +20,7 @@ type CourseRow = {
   id: number;
   title: string;
   DESCRIPTION: string | null;
+  category?: string | null;
   image_path?: string | null;
 };
 
@@ -34,6 +41,7 @@ async function mapCourseRows(rows: CourseRow[]): Promise<Course[]> {
         id: row.id,
         title: row.title,
         description: row.DESCRIPTION,
+        category: row.category?.trim() || null,
         imagePath: row.image_path ?? null,
         imageUrl,
       };
@@ -70,6 +78,63 @@ export async function getCourses(): Promise<Course[]> {
   }
 
   return mapCourseRows(data ?? []);
+}
+
+function isMissingCategoryColumn(error: { message: string; details?: string | null; hint?: string | null }) {
+  const message = `${error.message} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+  return message.includes('category') && (message.includes('does not exist') || message.includes('schema cache'));
+}
+
+async function fetchCourseCatalog(offset?: number, pageSize?: number): Promise<CourseCatalog> {
+  const selectCourses = async (includeCategory: boolean) => {
+    const columns = includeCategory
+      ? 'id, title, DESCRIPTION, image_path, category'
+      : 'id, title, DESCRIPTION, image_path';
+
+    let query = supabase.from('courses').select(columns).order('id', { ascending: true });
+
+    if (offset !== undefined && pageSize !== undefined) {
+      // Supabase range endpoints are inclusive: 0..9 returns the first 10 rows.
+      query = query.range(offset, offset + pageSize - 1);
+    }
+
+    return query;
+  };
+
+  const result = await selectCourses(true);
+
+  if (result.error) {
+    if (!isMissingCategoryColumn(result.error)) {
+      throw new Error('Could not load courses: ' + result.error.message);
+    }
+
+    const fallback = await selectCourses(false);
+    if (fallback.error) {
+      throw new Error('Could not load courses: ' + fallback.error.message);
+    }
+
+    return {
+      courses: await mapCourseRows((fallback.data ?? []) as unknown as CourseRow[]),
+      categoryAvailable: false,
+    };
+  }
+
+  return {
+    courses: await mapCourseRows((result.data ?? []) as unknown as CourseRow[]),
+    categoryAvailable: true,
+  };
+}
+
+export function getCourseCatalog(): Promise<CourseCatalog> {
+  return fetchCourseCatalog();
+}
+
+export function getCoursePage(offset: number, pageSize: number): Promise<CourseCatalog> {
+  if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(pageSize) || pageSize < 1) {
+    throw new Error('Course page offset and size must be positive whole numbers.');
+  }
+
+  return fetchCourseCatalog(offset, pageSize);
 }
 
 export async function uploadCourseImage(
