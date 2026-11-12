@@ -34,6 +34,14 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Class2 to choose a course image from your photos.",
+          "cameraPermission": "Allow Class2 to take a photo for a course image.",
+          "microphonePermission": false
+        }
+      ],
       "expo-sqlite"
     ],
     "experiments": {
